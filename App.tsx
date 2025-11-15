@@ -8,18 +8,8 @@ import { ReportDisplay } from './components/ReportDisplay';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { ConfirmDialog } from './components/ConfirmDialog';
-import { ThemeToggle } from './components/ThemeToggle';
 
 type View = 'login' | 'dashboard' | 'new_report' | 'view_report' | 'loading';
-type Theme = 'light' | 'dark';
-
-const getInitialTheme = (): Theme => {
-  const storedTheme = localStorage.getItem('theme');
-  if (storedTheme === 'light' || storedTheme === 'dark') {
-    return storedTheme;
-  }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-};
 
 const FileInput: React.FC<{ id: string; label: string; file: File | null; onFileChange: (file: File) => void;}> = ({ id, label, file, onFileChange }) => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,20 +54,22 @@ export default function App() {
   const [selectedReport, setSelectedReport] = useState<ReportData | null>(null);
   const [view, setView] = useState<View>('login');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: { matches: boolean }) => {
+      if (e.matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+    
+    handleChange(mediaQuery); // Set initial theme
+    mediaQuery.addEventListener('change', handleChange);
+    
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   // Form state
   const [shopName, setShopName] = useState<string>('');
@@ -219,7 +211,6 @@ export default function App() {
   return (
     <main className="relative min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-300">
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 flex items-center gap-4 z-10 no-print">
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         {currentUser && (
             <button onClick={() => setShowLogoutConfirm(true)} className="text-sm font-medium text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors">
                 Logout
