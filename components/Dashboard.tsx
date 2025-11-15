@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import type { ReportData } from '../types';
+import type { User } from '../services/userService';
 import { PlusIcon, SearchIcon } from './IconComponents';
 
 interface DashboardProps {
-  username: string;
+  user: User;
   reports: ReportData[];
   onCreateNew: () => void;
   onViewReport: (report: ReportData) => void;
@@ -33,7 +34,7 @@ const ReportCard: React.FC<{ report: ReportData; onClick: () => void }> = ({ rep
     )
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ username, reports, onCreateNew, onViewReport }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, reports, onCreateNew, onViewReport }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredReports = useMemo(() => {
@@ -52,7 +53,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ username, reports, onCreat
     <div className="w-full max-w-2xl animate-fade-in">
         <div className="flex justify-between items-center mb-6">
             <div>
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Welcome, {username}!</h2>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Welcome, {user.email || 'User'}!</h2>
                 <p className="text-slate-600 dark:text-slate-300">Here are your past credit-readiness reports.</p>
             </div>
             <button

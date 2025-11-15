@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { generateCreditReport } from './services/geminiService';
 import { getReportsForUser, saveReportsForUser } from './services/reportService';
+import { auth, onAuthStateChanged, signOut, type User } from './services/userService';
 import type { ReportData } from './types';
 import { DrishtiFiLogo, UploadIcon, ArrowLeftIcon } from './components/IconComponents';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -9,7 +10,7 @@ import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { ConfirmDialog } from './components/ConfirmDialog';
 
-type View = 'login' | 'dashboard' | 'new_report' | 'view_report' | 'loading';
+type View = 'login' | 'dashboard' | 'new_report' | 'view_report' | 'loading' | 'auth_loading';
 
 const FileInput: React.FC<{ id: string; label: string; file: File | null; onFileChange: (file: File) => void;}> = ({ id, label, file, onFileChange }) => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,10 +50,10 @@ const FileInput: React.FC<{ id: string; label: string; file: File | null; onFile
 
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userReports, setUserReports] = useState<ReportData[]>([]);
   const [selectedReport, setSelectedReport] = useState<ReportData | null>(null);
-  const [view, setView] = useState<View>('login');
+  const [view, setView] = useState<View>('auth_loading');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
@@ -71,6 +72,24 @@ export default function App() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+            setCurrentUser(user);
+            setUserReports(getReportsForUser(user.uid));
+            setView('dashboard');
+        } else {
+            setCurrentUser(null);
+            setUserReports([]);
+            setView('login');
+        }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
+
   // Form state
   const [shopName, setShopName] = useState<string>('');
   const [inventoryImage, setInventoryImage] = useState<File | null>(null);
@@ -88,18 +107,14 @@ export default function App() {
     setError(null);
   };
   
-  const handleLoginSuccess = (username: string) => {
-    setCurrentUser(username);
-    setUserReports(getReportsForUser(username));
-    setView('dashboard');
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setUserReports([]);
-    setSelectedReport(null);
-    resetForm();
-    setView('login');
+  const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        // The onAuthStateChanged listener will handle resetting state and view
+    } catch (error) {
+        console.error("Error signing out: ", error);
+        // Optionally show an error message to the user
+    }
   };
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -123,12 +138,9 @@ export default function App() {
         };
         const updatedReports = [...userReports, newReport];
         setUserReports(updatedReports);
-        saveReportsForUser(currentUser, updatedReports);
+        saveReportsForUser(currentUser.uid, updatedReports);
         setSelectedReport(newReport);
         setView('view_report');
-        // FIX: The form is reset on successful submission. The original implementation had a bug
-        // with a stale state variable in a `finally` block, causing a TypeScript error. 
-        // This is the correct place for the form reset logic.
         resetForm();
       }
     } catch (err: any) {
@@ -140,11 +152,13 @@ export default function App() {
 
   const renderContent = () => {
     switch (view) {
+        case 'auth_loading':
+             return <div className="w-16 h-16 border-4 border-slate-300 border-t-cyan-500 rounded-full animate-spin"></div>;
         case 'login':
-            return <Login onLoginSuccess={handleLoginSuccess} />;
+            return <Login />;
         case 'dashboard':
             return <Dashboard 
-                        username={currentUser!}
+                        user={currentUser!}
                         reports={userReports}
                         onCreateNew={() => setView('new_report')}
                         onViewReport={(report) => {
@@ -189,8 +203,6 @@ export default function App() {
 
                             <button
                                 type="submit"
-                                // FIX: This comparison is invalid because when `view` is 'new_report', it cannot also be 'loading'.
-                                // The button is unmounted when the view changes to 'loading', so this check is unnecessary.
                                 disabled={!isFormValid}
                                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 dark:bg-cyan-500 dark:hover:bg-cyan-600 dark:disabled:bg-slate-500 transition-colors"
                             >

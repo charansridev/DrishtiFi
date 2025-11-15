@@ -1,45 +1,33 @@
-/**
- * A simple service to manage user accounts in localStorage.
- * In a real-world application, this would be a secure backend service.
- */
+import { initializeApp } from 'firebase/app';
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut as firebaseSignOut,
+    onAuthStateChanged,
+    type User
+} from 'firebase/auth';
 
-const USER_STORAGE_KEY = 'drishtifi_users';
-
-type UserStore = { [key: string]: string };
-
-/**
- * Retrieves the user database from localStorage.
- * If no database exists, it initializes with a default user.
- * @returns The user store object (username: password).
- */
-export const getUsers = (): UserStore => {
-    try {
-        const usersJson = localStorage.getItem(USER_STORAGE_KEY);
-        if (usersJson) {
-            return JSON.parse(usersJson) as UserStore;
-        } else {
-            // Initialize with a default user if none exists
-            const defaultUsers: UserStore = { 'loan_officer': 'password123' };
-            saveUsers(defaultUsers);
-            return defaultUsers;
-        }
-    } catch (error) {
-        console.error("Failed to parse users from localStorage", error);
-        const defaultUsers: UserStore = { 'loan_officer': 'password123' };
-        saveUsers(defaultUsers);
-        return defaultUsers;
-    }
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBccJcnNd2mpoNMSL1vcaRBLVjuyp9eoME",
+  authDomain: "studio-8887708165-3d33a.firebaseapp.com",
+  projectId: "studio-8887708165-3d33a",
+  storageBucket: "studio-8887708165-3d33a.firebasestorage.app",
+  messagingSenderId: "821908583746",
+  appId: "1:821908583746:web:ceb925f4baa5a6b57784db"
 };
 
-/**
- * Saves the entire user database to localStorage.
- * @param users The user store object to save.
- */
-export const saveUsers = (users: UserStore): void => {
-    try {
-        const usersJson = JSON.stringify(users);
-        localStorage.setItem(USER_STORAGE_KEY, usersJson);
-    } catch (error) {
-        console.error("Failed to save users to localStorage", error);
-    }
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Export Firebase auth functions and types for use in the app
+export {
+    auth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    firebaseSignOut as signOut,
+    onAuthStateChanged,
 };
+export type { User };
